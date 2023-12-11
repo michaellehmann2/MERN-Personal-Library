@@ -1,0 +1,12 @@
+.singleBook {
+    border:1px solid;
+    width: 35%;
+    padding: 5px;
+    margin-top: 1%;
+    margin-bottom: 1%;
+}
+
+#displayChanger {
+    border:1px solid;
+    width: 30%;
+}

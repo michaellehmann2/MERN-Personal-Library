@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Michael's Library</title>
+    <link rel="stylesheet" href="LibraryStyle.css">
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel">
+	
+const { useState } = React;   //import { useState } from 'react';
+
+function App() { 
+  return (
+    <div>
+      <HeaderStuff /> 
+      <LibraryDisplayer />
+      <FooterStuff />
+    </div>
+  )
+}
+
+function HeaderStuff() {
+  return (<div className="headerStuff"><h1>Welcome to Michael's library site.</h1></div>)
+}
+
+function FooterStuff() {
+  return (<div className="footerStuff"><p>Thank you for visiting.</p></div>)
+}
+
+class LibraryDisplayer extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {displaying: "all", books : []};
+    }
+
+    //function to get books from the server
+    getBooks = async () => {
+        try {
+            let urlQuery = '';
+
+            //upate query string if the user wants available or checked out books
+            if (this.state.displaying == "avail") {
+                urlQuery = '?avail=true';
+            }
+            else if (this.state.displaying == "checkedOut") {
+                urlQuery = '?avail=false';
+            }
+            //call fetch, then update the books state with the data returned
+            let response = await fetch(`http:localhost:3000/books${urlQuery}`);
+            let data = await response.json();
+            this.setState({books: data});
+        } catch (error) {
+            console.error("error fetching books", error);
+        }
+    }
+
+    
+    handleChange = (e) => {
+        this.setState({ displaying : e.target.value }, () => {
+            this.getBooks();
+        });
+    }
+
+    updateBookState = async (bookId, type) => {
+        var book = this.state.books.find(t=>t.id == bookId);
+        if (type == 'in') {
+            book.avail = true;
+            book.who = '';
+            book.due = '';
+        }
+        else if (type == 'out') {
+            book.avail = false;
+            //it's me checking it out
+            book.who = 'Michael';
+            //due date is 2 weeks from now
+            book.due = new Date(Date.now() + 12096e5);
+            book.due = book.due.toLocaleDateString();
+        }
+        let response = await fetch((`http:localhost:3000/books/${book.id}`), {
+            method: "PUT",
+            headers: {'Content-Type': 'application/json',},
+            body:JSON.stringify(book)});
+        this.getBooks();
+    }
+
+    componentDidMount() { this.getBooks(); }
+
+    render() {
+        return (
+            <div>
+                <p>Welcome to the library. Books can be checked out for up to two weeks.</p>
+                <p>Note: New features are coming soon, such as better styling, more details for books, and the ability for different users to check out books. (Right now, all books are checked out by Michael himself.)</p>
+                <p>Note: Sometimes when you check out or return a book, the async function takes a little time to update the page. Please be patient.</p>
+                <div id="displayChanger" onChange={this.handleChange}>
+                    <p>Select which books you would like to view.</p>
+                    <label><input type="radio" name="booksDisplayType" value="all" defaultChecked/>All Books</label>
+                    <label><input type="radio" name="booksDisplayType" value="avail"/>Available Books</label>
+                    <label><input type="radio" name="booksDisplayType" value="checkedOut"/>Checked Out Books</label>
+                </div>
+                <div id="bookDisplayZone">
+                    <ul>
+                        {this.state.books.map(thisBook => (
+                            <DisplayDetails book={{thisBook}} updateBookState={this.updateBookState} key={thisBook.id}/>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+        )
+    }
+}
+
+function DisplayDetails(props) {
+    const currentBook = props.book.thisBook;
+
+    const checkIn = async () => {
+        await props.updateBookState(currentBook.id, 'in');
+    }
+
+    const checkOut = async () => {
+        await props.updateBookState(currentBook.id, 'out');
+    }
+
+    return (
+        <div className="singleBook">
+            <li key={currentBook.id}><i>{currentBook.title}</i> by <i>{currentBook.author}</i>
+                <p>Extended Details:</p>
+                <ul>
+                    <li>Published by {currentBook.publisher}</li>
+                    <li>ISBN: {currentBook.isbn}</li>
+                    {currentBook.avail
+                        ? <li>This book is available to be checked out <button onClick={checkOut}>Click here to check this book out</button></li>
+                        : <li>This book is currently checked out by {currentBook.who}. It is due on {currentBook.due}. 
+                            <button onClick={checkIn}>Click here to return this book</button></li>
+                    }
+                    <br/>
+                </ul>
+            </li>
+        </div>   
+    )
+}
+
+    </script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
