@@ -1,7 +1,8 @@
+require('dotenv').config();
 const express = require('express');
 const {MongoClient} = require('mongodb');
 
-let cs;
+const cs = process.env.MONGO_URI;
 let db;
 let books;
 
